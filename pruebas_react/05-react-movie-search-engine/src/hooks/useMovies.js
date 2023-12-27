@@ -1,15 +1,36 @@
-import responseMovies from "../mocks/whit-results.json";
-// import withoutResults from "../mocks/no-results.json";
+import { useRef, useState, useMemo, useCallback } from "react";
+import { searchMovies } from "../services/movies";
 
-export function useMovies() {
-  const movies = responseMovies.Search;
+export function useMovies({ search, sort }) {
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const previusSearch = useRef(search);
 
-  const mappedMovies = movies.map((movie) => ({
-    id: movie.imdbID,
-    title: movie.Title,
-    year: movie.Year,
-    poster: movie.Poster,
-  }));
+  const getMovies = useCallback  ( async ({search}) => {
+    if (previusSearch.current === search) return;
 
-  return { movies: mappedMovies };
+    try {
+      setLoading(true);
+      setError(null);
+      previusSearch.current = search;
+      const newMovies = await searchMovies({ search });
+      setMovies(newMovies);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // const sortedMovies = sort
+  //   ? [...movies].sort((a, b) => a.title.localeCompare(b.title))
+  //   : movies;
+
+  const sortedMovies = useMemo(() => {
+    if (!sort) return movies;
+    return [...movies].sort((a, b) => a.title.localeCompare(b.title));
+  }, [movies, sort]);
+
+  return { movies: sortedMovies, getMovies, loading, error };
 }
